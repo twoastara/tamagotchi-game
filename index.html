@@ -1,0 +1,107 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tamagotchi Relaxation Game</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-pink-100 flex items-center justify-center min-h-screen">
+  <div id="game-container" class="relative">
+    <div id="sketch-holder"></div>
+    <div id="note-display" class="absolute bottom-4 left-4 right-4 bg-white p-4 rounded-lg shadow-lg text-center text-pink-800 font-mono hidden"></div>
+  </div>
+  <script>
+    let notes = [
+      { id: 1, x: 50, y: 50, text: "Cuddle your Tamagotchi boyfriend and take a deep breath together!" },
+      { id: 2, x: 150, y: 100, text: "Sip some warm chamomile tea while he hums a lullaby~" },
+      { id: 3, x: 250, y: 150, text: "Wrap yourselves in a cozy blanket fort for snuggles!" },
+      { id: 4, x: 100, y: 200, text: "Listen to soft lo-fi music with your Tamagotchi love!" },
+      { id: 5, x: 200, y: 250, text: "Close your eyes, let him whisper sweet dreams to you~ Zzz!" }
+    ];
+    let currentNote = 1;
+    let gameWon = false;
+
+    function setup() {
+      let canvas = createCanvas(300, 300);
+      canvas.parent('sketch-holder');
+      textAlign(CENTER, CENTER);
+      textSize(16);
+    }
+
+    function draw() {
+      background(255, 182, 193); // Light pink background
+      if (gameWon) {
+        fill(255);
+        textSize(24);
+        text("You found all the notes! Time to relax~", width / 2, height / 2);
+        return;
+      }
+      notes.forEach(note => {
+        if (note.id < currentNote) return; // Skip collected notes
+        fill(note.id === currentNote ? [255, 105, 180] : [200, 200, 200]); // Highlight current note
+        ellipse(note.x, note.y, 30, 30);
+        fill(0);
+        text(note.id, note.x, note.y);
+      });
+    }
+
+    function mousePressed() {
+      if (gameWon) return;
+      for (let note of notes) {
+        if (note.id === currentNote && dist(mouseX, mouseY, note.x, note.y) < 15) {
+          let display = document.getElementById('note-display');
+          display.classList.remove('hidden');
+          display.innerText = note.text;
+          currentNote++;
+          if (currentNote > notes.length) {
+            gameWon = true;
+            display.innerText = "All notes found! Cuddle and sleep tight~";
+          }
+          break;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

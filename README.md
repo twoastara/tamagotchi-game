@@ -1,0 +1,2 @@
+# tamagotchi-game
+tamagochibuyfriend
